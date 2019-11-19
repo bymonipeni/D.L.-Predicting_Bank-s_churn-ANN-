@@ -1,0 +1,366 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[6]:
+
+
+# Importing the libraries
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+
+# In[7]:
+
+
+# Importing the dataset
+dataset = pd.read_csv('/Users/monipeni/Documents/Deep_Learning_A_Z/Volume 1 - Supervised Deep Learning/Part 1 - Artificial Neural Networks (ANN)/Section 2 - Part 1 - ANN/Churn_Modelling.csv')
+
+
+# In[8]:
+
+
+dataset.head()
+
+
+# In[13]:
+
+
+X = dataset.iloc[:, 3:13].values # we want only the columns from 3 to 12, columns 0,1 and 2 are not necessary
+y = dataset.iloc[:, 13].values
+
+
+# In[15]:
+
+
+X
+
+
+# In[16]:
+
+
+# Encoding categorical data
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+labelencoder_X_1 = LabelEncoder()
+X[:, 1] = labelencoder_X_1.fit_transform(X[:, 1]) #change to numbers the categorical variable "country", index 1
+labelencoder_X_2 = LabelEncoder()
+X
+
+
+# In[17]:
+
+
+X[:, 2] = labelencoder_X_2.fit_transform(X[:, 2]) # change to numbers the categorical variable "gender", index 2
+X
+
+
+# In[19]:
+
+
+# create dummy variables, to have countries with same value, France is 0, Germany 1, Spain 2, we don´t want think that 
+# Spain is bigger than France, so we create dummy variables with numbers 0, 0, 1 ... 
+onehotencoder = OneHotEncoder(categorical_features = [1]) # we want to change the variable country that is index 1
+X = onehotencoder.fit_transform(X).toarray()
+X = X[:, 1:] # remove one of the dummy var.to don´t fall in the dummy variable trap, we took all the columns 
+            # except the first one
+X
+
+
+# In[20]:
+
+
+# Splitting the dataset into the Training set and Test set
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 0)
+
+
+# In[21]:
+
+
+# Feature Scaling
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+
+# In[22]:
+
+
+# Importing the Keras libraries and packages
+import keras
+from keras.models import Sequential
+from keras.layers import Dense
+
+
+# In[23]:
+
+
+# Initialising the ANN
+classifier = Sequential()
+
+
+# In[24]:
+
+
+# Adding the input layer and the first hidden layer
+classifier.add(Dense(units = 6, kernel_initializer = 'uniform', activation = 'relu', input_dim = 11))
+# classifier.add(Dropout(p = 0.1)) we use this if we don´t want overfitting, we put it in every layer
+
+
+# In[ ]:
+
+
+# .add is the add method , to add the different layers in our neural network
+# units = 6 , is the number of nodes of the layer we are adding in this add function. We choose number 6 because we take
+# the average number of the nodes in the input layer and the output layer. The input layer has 11 nodes, that are 
+# the 11 independent variables and the output layer has only one node, because when the dependent variable has a binary
+# outcome, one or zero, there is only one node in the output layer. So 11+1 = 12%2 = 6
+# uniform function initialize the weights according to a uniform distribution and we are sure the numbers are small
+# numbers close to 0
+# we choose the rectifier activation function in the hidden layer and the sigmoid activation function in the output layer
+# so here is the hidden layer, we choose the rectifier function, that is relu function
+# input_dim =11, to say how many nodes has the input layer. We put this only in this line, because is the first layer
+# but in the other layers it´s not necessary because they will know what to expect.
+
+
+# In[25]:
+
+
+# Adding the second hidden layer
+classifier.add(Dense(units = 6, kernel_initializer = 'uniform', activation = 'relu'))
+# classifier.add(Dropout(p = 0.1))
+
+
+# In[26]:
+
+
+# Adding the output layer
+classifier.add(Dense(units = 1, kernel_initializer = 'uniform', activation = 'sigmoid'))
+# units = 1, we want only one node because is a binary outcome, 0 or 1 , and this is only one node
+# activation sigmoid to manage to get some probabilities in the logistic regression model
+# if other problem has 3 categories for the dependent variable, we have to change the number units = 3, and change the 
+# activation function, that has to be softmax, that is a sigmoid function but applied to more than two categories
+
+
+# In[27]:
+
+
+# Compiling the ANN 
+# that´s basically applying stochastic gradient descent on the hole artificial neural network
+classifier.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
+# .compile is the compile method
+# adam is the alghoritm for stochastic gradient descent, to find the best weights that will make our neural 
+# network the most powerful
+# loss function to find the optimal weights is going to be the logarithmic loss
+# for binary outcome, the loss function is binary_crossentropy
+# if the variable dependent has mor than two outcomes , the loss function to use is categorical_crossentropy
+# the accuracy metrics is gonna increase the accuracy little by little till arrive to the top of accuracy
+# the metrics expect a list of metrics, but we only want one element, that is the accuracy metrics, that´s why 
+# we put it with []
+
+
+# In[28]:
+
+
+# Fitting the ANN to the Training set
+classifier.fit(X_train, y_train, batch_size = 10, epochs = 100)
+
+
+# In[29]:
+
+
+# Making predictions and evaluating the model
+
+# Predicting the Test set results
+y_pred = classifier.predict(X_test)
+y_pred = (y_pred > 0.5) 
+# if y_pred is > 0.5 return True, if not return False
+# if it´s True, the client left the bank according to the model
+# if it´s False, the client stay at the bank
+
+
+# In[31]:
+
+
+y_pred
+
+
+# In[30]:
+
+
+# Making the Confusion Matrix
+from sklearn.metrics import confusion_matrix
+cm = confusion_matrix(y_test, y_pred)
+
+
+# In[32]:
+
+
+cm
+
+
+# In[33]:
+
+
+# Out of 2000 new observations we get 1124 + 205 correct predictions and 200 + 71 incorrect predictions
+
+
+# In[35]:
+
+
+# Predicting a single new observation
+# Use the ANN model to predict if the customer with the following informations will leave the bank: 
+"""Predict if the customer with the following informations will leave the bank:
+Geography: France
+Credit Score: 600
+Gender: Male
+Age: 40
+Tenure: 3
+Balance: 60000
+Number of Products: 2
+Has Credit Card: Yes
+Is Active Member: Yes
+Estimated Salary: 50000"""
+
+
+new_prediction = classifier.predict(sc.transform(np.array([[0.0, 0, 600, 1, 40, 3, 60000, 2, 1, 1, 50000]])))
+
+# np.array( [[ we put this 2 [[ because we want the information in horitzontal, not in column. If we put [ ]
+# will be a column, when put 2 [[ we create a 2 dimensional array and this will be the first line and only one
+# we have to do the exact same escale to the array that we did before (sc = StandardScaler()) , that´s why
+# we use sc.transform for all the array
+
+new_prediction = (new_prediction > 0.5)
+new_prediction
+
+
+# In[36]:
+
+
+# the prediction is False, so the customer doesn´t live the bank 
+
+
+# In[38]:
+
+
+# Evaluating, Improving and Tuning the ANN
+
+# Evaluating the ANN
+# we are gonna use k-fold cross validation, splitting the training set into 10 folds, we train our model in 9 folds
+# and we test it at the last remaining fold, number 10. As we have 10 folds, we can train the model and test the 
+# model in 10 different combinations
+from keras.wrappers.scikit_learn import KerasClassifier
+from sklearn.model_selection import cross_val_score
+from keras.models import Sequential
+from keras.layers import Dense
+def build_classifier(): # this function just built our ANN 
+    classifier = Sequential()
+    classifier.add(Dense(units = 6, kernel_initializer = 'uniform', activation = 'relu', input_dim = 11))
+    classifier.add(Dense(units = 6, kernel_initializer = 'uniform', activation = 'relu'))
+    classifier.add(Dense(units = 1, kernel_initializer = 'uniform', activation = 'sigmoid'))
+    classifier.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy']) # we copy and paste
+    # all the ANN that we built before, but not the line where we fit with the training set
+    return classifier
+classifier = KerasClassifier(build_fn = build_classifier, batch_size = 10, epochs = 100)
+# batch_size and epochs are the same like we use before for fitting
+accuracies = cross_val_score(estimator = classifier, X = X_train, y = y_train, cv = 10, n_jobs = -1)
+# estimator is the object we use to fit the data, in this case is the "classifier" , cv is the number of folds 
+# and we normally use 10 , n_jobs is the number of CPU´s to do this computation and -1 means all CPU´s
+
+
+# In[39]:
+
+
+mean = accuracies.mean()
+variance = accuracies.std()
+
+
+# In[40]:
+
+
+mean
+
+
+# In[ ]:
+
+
+# we have 84% accuracy
+
+
+# In[41]:
+
+
+variance
+
+
+# In[42]:
+
+
+# we have rather low variance. If we obtain a high variance or very different accuracy numbers, means we are 
+# overfitting the model. Then we use dropout in every layer of the model. In this case is not necessary, that´s
+# why we let the line dropout in our model with # , for not execute
+
+
+# In[43]:
+
+
+# Improving the ANN
+# Dropout Regularization to reduce overfitting if needed
+
+
+# In[44]:
+
+
+# Tuning the ANN with the technique Grid Search
+
+from sklearn.model_selection import GridSearchCV
+
+def build_classifier(optimizer): # We copy and paste the same function than k-fold cross validation, but we change the
+                                # optimizer, because we want to try not only adam, we want to try rmsprop, so we put 
+                                # def build_classifier (optimizer) and in the last layer optimizer = optimizer
+                                # and then the function will use the algorithms that we say, adam and rmsprop
+    classifier = Sequential()
+    classifier.add(Dense(units = 6, kernel_initializer = 'uniform', activation = 'relu', input_dim = 11))
+    classifier.add(Dense(units = 6, kernel_initializer = 'uniform', activation = 'relu'))
+    classifier.add(Dense(units = 1, kernel_initializer = 'uniform', activation = 'sigmoid'))
+    classifier.compile(optimizer = optimizer, loss = 'binary_crossentropy', metrics = ['accuracy'])
+    return classifier
+
+classifier = KerasClassifier(build_fn = build_classifier)
+
+# let´s gonna create a dictionary that contain the hyper parameters
+parameters = {'batch_size': [10, 20, 25],            
+              'epochs': [100, 500, 1000],
+              'optimizer': ['adam', 'rmsprop']}
+grid_search = GridSearchCV(estimator = classifier,
+                           param_grid = parameters, # parameters is the dictionary that contain the hyper parameters
+                           scoring = 'accuracy',
+                           cv = 10)
+grid_search = grid_search.fit(X_train, y_train)
+
+
+# In[ ]:
+
+
+best_parameters = grid_search.best_params_
+best_accuracy = grid_search.best_score_
+
+
+# In[ ]:
+
+
+best_parameters
+
+
+# In[ ]:
+
+
+best_accuracy´
+
+
+# In[ ]:
+
+
+86 % accuracy in our model
+
